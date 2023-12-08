@@ -1,4 +1,4 @@
-find_package(Boost 1.71.0 COMPONENTS REQUIRED )
+find_package(Boost 1.82.0 COMPONENTS REQUIRED )
 include_directories(${Boost_INCLUDE_DIRS})
 link_directories(${Boost_LIBRARY_DIRS})
 
