@@ -2,7 +2,9 @@
 #include "./Server/Server.h"
 
 int main(){
-    std::cout << "dupa" << std::endl;
-    Server server;
+    int port = 7777;
+    /*std::cout << "Provide the port number: " << std::endl;
+    std::cin >> port;*/
+    Server server(port);
     return 0;
 }

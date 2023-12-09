@@ -1,13 +1,14 @@
 #pragma once
-#include <boost/asio.hpp>
+#include "TCPListener.h"
 #include "../ThreadPool/ThreadPool.h"
 
 #define THREAD_NUM 2
 
 class Server {
 	public:
-		Server();
+		Server(int port);
 	private:
 		int port;
+		TCPListener tcpListener;
 		ThreadPool threadPool;
 };
