@@ -2,6 +2,9 @@ find_package(Boost 1.82.0 COMPONENTS REQUIRED )
 include_directories(${Boost_INCLUDE_DIRS})
 link_directories(${Boost_LIBRARY_DIRS})
 
+message(Boost_INCLUDE_DIRS="${Boost_INCLUDE_DIRS}")
+message(Boost_LIBRARY_DIRS="${Boost_LIBRARY_DIRS}")
+
 include(src/Server/CMakeLists.txt)
 include(src/Client/CMakeLists.txt)
 include(src/ThreadPool/CMakeLists.txt)
