@@ -4,8 +4,7 @@
 UDPListener::UDPListener(int port)
 	: port(port), startTime(std::chrono::steady_clock::now()), threadPool(1), messageSize(0), totalBytesReceived(0), isSizeSet(false)
 	// it accepts every ip in given port
-	, acceptor(ioService, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port))
-	, socket(ioService)
+	, endpoint(boost::asio::ip::udp::v4(), port), socket(ioService, endpoint)
 {
 	threadPool.start();
 }
@@ -13,10 +12,12 @@ UDPListener::UDPListener(int port)
 void UDPListener::handleMessageSize() {
 	boost::asio::streambuf receiveBuffer;
 	boost::system::error_code error;
-	read_until(socket, receiveBuffer, '\a', error);
-	std::string receivedData(boost::asio::buffers_begin(receiveBuffer.data()),
-		boost::asio::buffers_begin(receiveBuffer.data()) + receiveBuffer.size());
-	//BOOST_LOG_TRIVIAL(info) << "Received: " << receivedData;
+	std::size_t bytesRead = socket.receive_from(receiveBuffer.prepare(100), endpoint, 0, error);
+	receiveBuffer.commit(bytesRead);
+	std::istream is(&receiveBuffer);
+	std::string receivedData;
+	std::getline(is, receivedData);
+	BOOST_LOG_TRIVIAL(info) << "Received udp: " << receivedData;
 	std::size_t pos = receivedData.find(':');
 	if (pos != std::string::npos) {
 		std::string numStr = receivedData.substr(pos + 1);
@@ -24,11 +25,11 @@ void UDPListener::handleMessageSize() {
 			int num = std::stoi(numStr);
 			if (!isSizeSet) {
 				this->messageSize = num;
-				BOOST_LOG_TRIVIAL(info) << "Extracted size: " << messageSize;
-				isSizeSet = true;
+				BOOST_LOG_TRIVIAL(info) << "Extracted size: " << this->messageSize;
+				this->isSizeSet = true;
 			} else if (num != this->messageSize){
-				BOOST_LOG_TRIVIAL(info) << "Extracted size: " << messageSize << " is wrong. Sending disconnecting message";
-				boost::asio::write(socket, boost::asio::buffer("DISCONNECT"));
+				BOOST_LOG_TRIVIAL(info) << "Extracted size: " << this->messageSize << " is wrong. Sending disconnecting message";
+				socket.send_to(boost::asio::buffer("DISCONNECT"), this->endpoint);
 			}
 		}
 		catch (const std::exception& e) {
@@ -50,7 +51,7 @@ void UDPListener::handleIncomingMessages() {
 		boost::system::error_code error;
 
 		// Read the specified number of bytes
-		std::size_t bytesRead = boost::asio::read(socket, boost::asio::buffer(message), error);
+		std::size_t bytesRead = socket.receive_from(boost::asio::buffer(message), endpoint, 0, error);
 		if (error == boost::asio::error::eof) {
 			// Client disconnected
 			BOOST_LOG_TRIVIAL(info) << "Client disconnected.";

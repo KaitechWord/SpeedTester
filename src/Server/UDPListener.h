@@ -11,8 +11,8 @@ class UDPListener {
 		std::atomic<int> messageSize;
 		ThreadPool threadPool;
 		boost::asio::io_service ioService;
-		boost::asio::ip::tcp::acceptor acceptor;
-		boost::asio::ip::tcp::socket socket;
+		boost::asio::ip::udp::endpoint endpoint;
+		boost::asio::ip::udp::socket socket;
 		double totalBytesReceived;
 		bool isSizeSet;
 		std::chrono::steady_clock::time_point startTime;
