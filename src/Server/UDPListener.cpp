@@ -41,6 +41,8 @@ UDPListener::UDPListener(int port)
 
 void UDPListener::handleIncomingMessages() {
 	this->totalBytesReceived = 0;
+	this->messageSize = 0;
+	this->isSizeSet = false;
 	while (true) {
 		if (!this->isSizeSet) {
 			messageSize = 100;
@@ -73,14 +75,7 @@ void UDPListener::handleIncomingMessages() {
 			}
 		} else if (this->isSizeSet) {
 			//if just random packet
-			if (error == boost::asio::error::eof) {
-				// Client disconnected
-				this->messageSize = 0;
-				this->isSizeSet = false;
-				BOOST_LOG_TRIVIAL(info) << "UDP client disconnected.";
-				break;
-			}
-			else if (error) {
+			if (error) {
 				// Handle other errors
 				BOOST_LOG_TRIVIAL(error) << "UDP error during read: " << error.message();
 				break;
@@ -90,7 +85,7 @@ void UDPListener::handleIncomingMessages() {
 				auto currentTime = std::chrono::steady_clock::now();
 				auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - startTime).count() / 1000.0;
 				std::string receivedData(message.data(), bytesRead);
-				//BOOST_LOG_TRIVIAL(info) << "Message: " << receivedData;
+				BOOST_LOG_TRIVIAL(info) << "UDP bytesRead: " << bytesRead;
 				this->totalBytesReceived += bytesRead;
 				double speedKbPerSec = totalBytesReceived / elapsedTime / 1024.0;
 				BOOST_LOG_TRIVIAL(info) << "UDP Received " << totalBytesReceived / 1024 << " KB in "

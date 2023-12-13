@@ -11,7 +11,11 @@ include(src/ThreadPool/CMakeLists.txt)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_executable(${PROJECT_NAME} src/main.cpp ${server_src} ${client_src} ${thread_pool_src})
+add_executable(Server src/server.cpp ${server_src} ${thread_pool_src})
 
-target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
-target_link_libraries(${PROJECT_NAME} LINK_PUBLIC ${Boost_LIBRARIES})
+add_executable(Client src/client.cpp ${client_src} ${thread_pool_src})
+
+target_compile_features(Server PRIVATE cxx_std_17)
+target_compile_features(Client PRIVATE cxx_std_17)
+target_link_libraries(Server LINK_PUBLIC ${Boost_LIBRARIES})
+target_link_libraries(Client LINK_PUBLIC ${Boost_LIBRARIES})

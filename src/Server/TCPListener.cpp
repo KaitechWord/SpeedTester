@@ -82,6 +82,7 @@ void TCPListener::handleIncomingMessages(std::shared_ptr<boost::asio::ip::tcp::s
 			//BOOST_LOG_TRIVIAL(info) << "Message: " << receivedData;
 			this->totalBytesReceived += bytesRead;
 			double speedKbPerSec = totalBytesReceived / elapsedTime / 1024.0;
+			BOOST_LOG_TRIVIAL(info) << "TCP bytesRead: " << bytesRead;
 			BOOST_LOG_TRIVIAL(info) << "TCP Received " << totalBytesReceived / 1024 << " KB in "
 				<< elapsedTime << " seconds with the speed of " << speedKbPerSec << " KB/sec" << std::endl;
 		}
