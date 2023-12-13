@@ -17,12 +17,12 @@ void TCPListener::establishConnection(){
 	if (this->isConnected) {
 		try {
 			boost::asio::write(this->socket, boost::asio::buffer("BUSY"));
-			BOOST_LOG_TRIVIAL(info) << "Sent BUSY";
+			BOOST_LOG_TRIVIAL(info) << "TCP sent BUSY";
 			this->socket.close();
 			this->isMultipleConnected = true;
 		}
 		catch (const boost::system::system_error& e) {
-			BOOST_LOG_TRIVIAL(error) << "Error sending busy message: " << e.what();
+			BOOST_LOG_TRIVIAL(error) << "TCP error sending busy message: " << e.what();
 		}
 		BOOST_LOG_TRIVIAL(info) << "TCP connection already established.";
 		return;
@@ -37,20 +37,19 @@ void TCPListener::handleMessageSize(){
 	read_until(socket, receiveBuffer, '\a', error);
 	std::string receivedData(boost::asio::buffers_begin(receiveBuffer.data()),
 		boost::asio::buffers_begin(receiveBuffer.data()) + receiveBuffer.size());
-	BOOST_LOG_TRIVIAL(info) << "Received: " << receivedData;
 	std::size_t pos = receivedData.find(':');
 	if (pos != std::string::npos) {
 		std::string numStr = receivedData.substr(pos + 1);
 		try {
 			this->messageSize.store(std::stoi(numStr));
-			BOOST_LOG_TRIVIAL(info) << "Extracted size: " << messageSize;
+			BOOST_LOG_TRIVIAL(info) << "TCP extracted size: " << messageSize;
 		}
 		catch (const std::exception& e) {
-			BOOST_LOG_TRIVIAL(error) << "Error converting string to number: " << e.what() << std::endl;
+			BOOST_LOG_TRIVIAL(error) << "TCP error converting string to number: " << e.what() << std::endl;
 		}
 	}
 	else {
-		BOOST_LOG_TRIVIAL(error) << "Invalid format. Missing ':' in the received string." << std::endl;
+		BOOST_LOG_TRIVIAL(error) << "TCP invalid format. Missing ':' in the received string." << std::endl;
 	}
 	receiveBuffer.consume(receiveBuffer.size());
 }
@@ -67,12 +66,12 @@ void TCPListener::handleIncomingMessages(std::shared_ptr<boost::asio::ip::tcp::s
 		std::size_t bytesRead = boost::asio::read(*socket, boost::asio::buffer(message), error);
 		if (error == boost::asio::error::eof) {
 			// Client disconnected
-			BOOST_LOG_TRIVIAL(info) << "Client disconnected.";
+			BOOST_LOG_TRIVIAL(info) << "TCP client disconnected.";
 			break;
 		}
 		else if (error) {
 			// Handle other errors
-			BOOST_LOG_TRIVIAL(error) << "Error during read: " << error.message();
+			BOOST_LOG_TRIVIAL(error) << "TCP error during read: " << error.message();
 			break;
 		}
 		else {
@@ -105,6 +104,6 @@ void TCPListener::run(){
 		}
 	}
 	catch (const boost::system::system_error& e) {
-		BOOST_LOG_TRIVIAL(error) << "Error during TCP accept: " << e.what() << std::endl;
+		BOOST_LOG_TRIVIAL(error) << "TCP error during TCP accept: " << e.what() << std::endl;
 	}
 }
