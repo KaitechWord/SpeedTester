@@ -3,8 +3,9 @@
 
 //https://www.codeproject.com/Articles/1264257/Socket-Programming-in-Cplusplus-using-boost-asio-T
 
-TCPListener::TCPListener(int port) 
+TCPListener::TCPListener(int port, std::atomic<bool>& shouldQuit)
 	: port(port), startTime(std::chrono::steady_clock::now()), threadPool(1), isConnected(false), isMultipleConnected(false), messageSize(0), totalBytesReceived(0)
+	, shouldQuit(shouldQuit)
 	// it accepts every ip in given port
 	, acceptor(ioService, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port))
 	, socket(ioService)
@@ -43,6 +44,7 @@ void TCPListener::handleMessageSize(){
 		try {
 			this->messageSize.store(std::stoi(numStr));
 			BOOST_LOG_TRIVIAL(info) << "TCP extracted size: " << messageSize;
+			boost::asio::write(this->socket, boost::asio::buffer("GO ON\a"));
 		}
 		catch (const std::exception& e) {
 			BOOST_LOG_TRIVIAL(error) << "TCP error converting string to number: " << e.what() << std::endl;
@@ -67,7 +69,10 @@ void TCPListener::handleIncomingMessages(std::shared_ptr<boost::asio::ip::tcp::s
 		if (error == boost::asio::error::eof) {
 			// Client disconnected
 			BOOST_LOG_TRIVIAL(info) << "TCP client disconnected.";
-			break;
+			this->totalBytesReceived = 0;
+			this->isMultipleConnected = false;
+			this->isConnected = false;
+			return;
 		}
 		else if (error) {
 			// Handle other errors

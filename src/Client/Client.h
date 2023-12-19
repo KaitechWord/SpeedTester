@@ -13,6 +13,8 @@ class Client {
 		int dataSize;
 		bool isNagleUsed;
 		ThreadPool threadPool;
+		std::atomic<bool> shouldQuit;
+		std::atomic<bool> isConnectionActive;
 		TCPSender tcpSender;
 		UDPSender udpSender;
 };

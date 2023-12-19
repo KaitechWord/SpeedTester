@@ -4,7 +4,7 @@
 
 class UDPListener {
 	public:
-		UDPListener(int port);
+		UDPListener(int port, std::atomic<bool>& shouldQuit);
 		void run();
 	private:
 		int port;
@@ -16,6 +16,7 @@ class UDPListener {
 		double totalBytesReceived;
 		bool isSizeSet;
 		std::chrono::steady_clock::time_point startTime;
+		std::atomic<bool> &shouldQuit;
 		void handleMessageSize();
 		void handleIncomingMessages();
 };

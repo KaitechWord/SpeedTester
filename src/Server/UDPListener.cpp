@@ -1,43 +1,14 @@
 #include "UDPListener.h"
 #include <boost/log/trivial.hpp>
 
-UDPListener::UDPListener(int port)
+UDPListener::UDPListener(int port, std::atomic<bool>& shouldQuit)
 	: port(port), startTime(std::chrono::steady_clock::now()), threadPool(1), messageSize(0), totalBytesReceived(0), isSizeSet(false)
+	, shouldQuit(shouldQuit)
 	// it accepts every ip in given port
 	, endpoint(boost::asio::ip::udp::v4(), port), socket(ioService, endpoint)
 {
 	threadPool.start();
 }
-
-//void UDPListener::handleMessageSize() {
-//	boost::asio::streambuf receiveBuffer;
-//	boost::system::error_code error;
-//	std::size_t bytesRead = socket.receive_from(receiveBuffer.prepare(100), endpoint, 0, error);
-//	receiveBuffer.commit(bytesRead);
-//	std::istream is(&receiveBuffer);
-//	std::string receivedData;
-//	std::getline(is, receivedData);
-//	std::size_t pos = receivedData.find("SIZE:");
-//	if (pos != std::string::npos) {
-//		std::string numStr = receivedData.substr(pos + std::string("SIZE:").length() + 1);
-//		try {
-//			int num = std::stoi(numStr);
-//			if (!isSizeSet) {
-//				this->messageSize = num;
-//				BOOST_LOG_TRIVIAL(info) << "Extracted size: " << this->messageSize;
-//				this->isSizeSet = true;
-//				this->startTime = std::chrono::steady_clock::now();
-//			} else if (num != this->messageSize){
-//				BOOST_LOG_TRIVIAL(info) << "Extracted size: " << this->messageSize << " is wrong. Sending disconnecting message";
-//				socket.send_to(boost::asio::buffer("DISCONNECT"), this->endpoint);
-//			}
-//		}
-//		catch (const std::exception& e) {
-//			BOOST_LOG_TRIVIAL(error) << "Error converting string to number: " << e.what() << std::endl;
-//		}
-//	}
-//	receiveBuffer.consume(receiveBuffer.size());
-//}
 
 void UDPListener::handleIncomingMessages() {
 	this->totalBytesReceived = 0;

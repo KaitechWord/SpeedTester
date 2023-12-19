@@ -6,7 +6,7 @@
 
 class TCPListener {
 	public:
-		TCPListener(int port);
+		TCPListener(int port, std::atomic<bool> &shouldQuit);
 		void run();
 	private:
 		int port;
@@ -16,6 +16,7 @@ class TCPListener {
 		boost::asio::ip::tcp::acceptor acceptor;
 		boost::asio::ip::tcp::socket socket;
 		double totalBytesReceived;
+		std::atomic<bool> &shouldQuit;
 		std::atomic<bool> isConnected;
 		bool isMultipleConnected;
 		std::chrono::steady_clock::time_point startTime;
