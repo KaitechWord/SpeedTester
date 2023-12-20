@@ -5,7 +5,7 @@
 Client::Client(const std::string& ip, int port, int dataSize, bool isNagleUsed)
 	: ip(ip), port(port), dataSize(dataSize), isNagleUsed(isNagleUsed), threadPool(3), isConnectionActive(false)
 	, tcpSender(ip, port, dataSize, isNagleUsed, isConnectionActive, shouldQuit)
-	, udpSender(ip, port, dataSize, isNagleUsed, isConnectionActive, shouldQuit)
+	, udpSender(ip, port, dataSize, isConnectionActive, shouldQuit)
 {
 	this->threadPool.queueJob([this]() { this->tcpSender.run(); });
 	this->threadPool.queueJob([this]() { this->udpSender.run(); });
@@ -19,5 +19,4 @@ Client::Client(const std::string& ip, int port, int dataSize, bool isNagleUsed)
 	this->threadPool.start();
 	while (this->threadPool.busy()) {};
 	this->threadPool.stop();
-	std::cout << "dupa";
 }

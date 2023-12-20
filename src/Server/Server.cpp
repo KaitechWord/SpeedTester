@@ -4,7 +4,7 @@
 
 Server::Server(int port)
 	: port(port)
-	, threadPool(THREAD_NUM)
+	, threadPool(3)
 	, shouldQuit(false)
 	, tcpListener(port, this->shouldQuit)
 	, udpListener(port, this->shouldQuit)
@@ -15,6 +15,7 @@ Server::Server(int port)
 		char a = getchar();
 		if (a == 'q') {
 			this->shouldQuit.store(true);
+			break;
 		}
 	}});
 	this->threadPool.start();

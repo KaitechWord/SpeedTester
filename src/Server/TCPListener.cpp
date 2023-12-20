@@ -4,7 +4,7 @@
 //https://www.codeproject.com/Articles/1264257/Socket-Programming-in-Cplusplus-using-boost-asio-T
 
 TCPListener::TCPListener(int port, std::atomic<bool>& shouldQuit)
-	: port(port), startTime(std::chrono::steady_clock::now()), threadPool(1), isConnected(false), isMultipleConnected(false), messageSize(0), totalBytesReceived(0)
+	: port(port), startTime(std::chrono::steady_clock::now()), threadPool(1), isConnected(false), messageSize(0), totalBytesReceived(0)
 	, shouldQuit(shouldQuit)
 	// it accepts every ip in given port
 	, acceptor(ioService, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port))
@@ -20,7 +20,6 @@ void TCPListener::establishConnection(){
 			boost::asio::write(this->socket, boost::asio::buffer("BUSY"));
 			BOOST_LOG_TRIVIAL(info) << "TCP sent BUSY";
 			this->socket.close();
-			this->isMultipleConnected = true;
 		}
 		catch (const boost::system::system_error& e) {
 			BOOST_LOG_TRIVIAL(error) << "TCP error sending busy message: " << e.what();
@@ -29,7 +28,6 @@ void TCPListener::establishConnection(){
 		return;
 	}
 	this->isConnected.store(true);
-	BOOST_LOG_TRIVIAL(info) << "TCP Connection established.";
 }
 
 void TCPListener::handleMessageSize(){
@@ -60,7 +58,7 @@ void TCPListener::handleMessageSize(){
 void TCPListener::handleIncomingMessages(std::shared_ptr<boost::asio::ip::tcp::socket> socket) {
 	this->totalBytesReceived = 0;
 	this->startTime = std::chrono::steady_clock::now();
-	while (true) {
+	while (!this->shouldQuit.load()) {
 		std::vector<char> message(this->messageSize);
 		boost::system::error_code error;
 
@@ -68,9 +66,7 @@ void TCPListener::handleIncomingMessages(std::shared_ptr<boost::asio::ip::tcp::s
 		std::size_t bytesRead = boost::asio::read(*socket, boost::asio::buffer(message), error);
 		if (error == boost::asio::error::eof) {
 			// Client disconnected
-			BOOST_LOG_TRIVIAL(info) << "TCP client disconnected.";
 			this->totalBytesReceived = 0;
-			this->isMultipleConnected = false;
 			this->isConnected = false;
 			return;
 		}
@@ -98,18 +94,19 @@ void TCPListener::handleIncomingMessages(std::shared_ptr<boost::asio::ip::tcp::s
 
 void TCPListener::run(){
 	try {
-		while (true) {
+		while (!this->shouldQuit.load()) {
 			this->establishConnection();
-			if (!this->isMultipleConnected) {
-				this->handleMessageSize();
-				std::shared_ptr<boost::asio::ip::tcp::socket> threadSocket = std::make_shared<boost::asio::ip::tcp::socket>(std::move(this->socket));
-				this->threadPool.queueJob([this, threadSocket]() { this->handleIncomingMessages(threadSocket); });
-			} else {
-				this->isMultipleConnected = false;
-			}
+			this->handleMessageSize();
+			std::shared_ptr<boost::asio::ip::tcp::socket> threadSocket = std::make_shared<boost::asio::ip::tcp::socket>(std::move(this->socket));
+			this->threadPool.queueJob([this, threadSocket]() { this->handleIncomingMessages(threadSocket); });
 		}
+		BOOST_LOG_TRIVIAL(info) << "TCP client disconnected.";
 	}
 	catch (const boost::system::system_error& e) {
 		BOOST_LOG_TRIVIAL(error) << "TCP error during TCP accept: " << e.what() << std::endl;
 	}
+}
+
+TCPListener::~TCPListener() {
+	this->threadPool.stop();
 }

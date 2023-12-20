@@ -11,9 +11,14 @@ void TCPSender::run() {
 
 void TCPSender::sendMessages() {
 	try {
+		socket.open(boost::asio::ip::tcp::v4());
+		if (!this->isNagleUsed) {
+			//disabling nagle alg.
+			socket.set_option(boost::asio::ip::tcp::no_delay(true));
+		}
 		socket.connect(boost::asio::ip::tcp::endpoint(boost::asio::ip::address::from_string(this->ip), this->port));
 		boost::asio::write(this->socket, boost::asio::buffer("SIZE:" + std::to_string(this->dataSize) + '\a'));
-		BOOST_LOG_TRIVIAL(info) << "TCP sent SIZE:" << this->dataSize;
+		BOOST_LOG_TRIVIAL(trace) << "TCP sent SIZE:" << this->dataSize;
 		boost::asio::streambuf receiveBuffer;
 		boost::system::error_code error;
 		read_until(socket, receiveBuffer, '\a', error);
@@ -30,28 +35,29 @@ void TCPSender::sendMessages() {
 				try {
 					boost::asio::write(this->socket, boost::asio::buffer(message), error);
 					if (error == boost::asio::error::eof) {
-						BOOST_LOG_TRIVIAL(info) << "TCP server disconnected.";
+						BOOST_LOG_TRIVIAL(trace) << "TCP server disconnected.";
 						break;
 					}
 					else if (error) {
-						BOOST_LOG_TRIVIAL(error) << "TCP error during write: " << error.message();
+						BOOST_LOG_TRIVIAL(fatal) << "TCP error during write: " << error.message();
 						break;
 					}
 					if (this->shouldQuit.load()) {
-						BOOST_LOG_TRIVIAL(info) << "User exited.";
+						Sleep(10);
+						socket.close();
+						BOOST_LOG_TRIVIAL(trace) << "User exited.";
 						break;
 					}
 				}
 				catch (const boost::system::system_error& e) {
-					BOOST_LOG_TRIVIAL(error) << "TCP error during write: " << e.what();
+					BOOST_LOG_TRIVIAL(fatal) << "TCP error during write: " << e.what();
 				}
 			}
 			this->isConnectionActive.store(false);
-			socket.close();
 		}
 	}
 	catch (const boost::system::system_error& e) {
-		BOOST_LOG_TRIVIAL(error) << "TCP error: " << e.what();
+		BOOST_LOG_TRIVIAL(fatal) << "TCP error: " << e.what();
 	}
-	BOOST_LOG_TRIVIAL(info) << "TCP exited.";
+	BOOST_LOG_TRIVIAL(trace) << "TCP exited.";
 }

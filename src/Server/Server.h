@@ -4,8 +4,6 @@
 #include "../ThreadPool/ThreadPool.h"
 #include <atomic>
 
-#define THREAD_NUM 2
-
 class Server {
 	public:
 		Server(int port);

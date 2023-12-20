@@ -8,6 +8,7 @@ class TCPListener {
 	public:
 		TCPListener(int port, std::atomic<bool> &shouldQuit);
 		void run();
+		~TCPListener();
 	private:
 		int port;
 		std::atomic<int> messageSize;
@@ -18,7 +19,6 @@ class TCPListener {
 		double totalBytesReceived;
 		std::atomic<bool> &shouldQuit;
 		std::atomic<bool> isConnected;
-		bool isMultipleConnected;
 		std::chrono::steady_clock::time_point startTime;
 		void establishConnection();
 		void handleMessageSize();

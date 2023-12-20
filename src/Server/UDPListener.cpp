@@ -14,7 +14,9 @@ void UDPListener::handleIncomingMessages() {
 	this->totalBytesReceived = 0;
 	this->messageSize = 0;
 	this->isSizeSet = false;
-	while (true) {
+	int lastIndex = 0;
+	int lostIndexes = 0;
+	while (!this->shouldQuit.load()) {
 		if (!this->isSizeSet) {
 			messageSize = 100;
 		}
@@ -36,14 +38,13 @@ void UDPListener::handleIncomingMessages() {
 					this->isSizeSet = true;
 					this->startTime = std::chrono::steady_clock::now();
 				}
-				else if (num != this->messageSize) {
-					BOOST_LOG_TRIVIAL(info) << "UDP extracted size: " << this->messageSize << " is wrong. Sending disconnecting message";
-					socket.send_to(boost::asio::buffer("DISCONNECT"), this->endpoint);
-				}
 			}
 			catch (const std::exception& e) {
 				BOOST_LOG_TRIVIAL(error) << "UDP error converting string to number: " << e.what() << std::endl;
 			}
+		} else if (message.find("FINE") != std::string::npos) {
+			this->totalBytesReceived = 0;
+			break;
 		} else if (this->isSizeSet) {
 			//if just random packet
 			if (error) {
@@ -56,22 +57,31 @@ void UDPListener::handleIncomingMessages() {
 				auto currentTime = std::chrono::steady_clock::now();
 				auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - startTime).count() / 1000.0;
 				std::string receivedData(message.data(), bytesRead);
-				BOOST_LOG_TRIVIAL(info) << "UDP bytesRead: " << bytesRead;
 				this->totalBytesReceived += bytesRead;
 				double speedKbPerSec = totalBytesReceived / elapsedTime / 1024.0;
+				std::string index = receivedData.substr(0, receivedData.find('a'));
+				int indexNum = stoi(index);
+				int indexesDiff = indexNum - lastIndex;
+				if (indexesDiff > 1 ) {
+					lostIndexes += indexesDiff;
+				}
+				float transmissionError = float(lostIndexes / indexNum);
+				lastIndex = indexNum;
+				BOOST_LOG_TRIVIAL(info) << "UDP bytesRead: " << bytesRead;
+				BOOST_LOG_TRIVIAL(info) << "UDP transimission error: " << transmissionError << "%";
 				BOOST_LOG_TRIVIAL(info) << "UDP Received " << totalBytesReceived / 1024 << " KB in "
 					<< elapsedTime << " seconds with the speed of " << speedKbPerSec << " KB/sec" << std::endl;
 			}
 		}
 	}
-	this->socket.close();
 }
 
 void UDPListener::run() {
 	try {
-		while (true) {
+		while (!this->shouldQuit.load()) {
 			this->handleIncomingMessages();
 		}
+		BOOST_LOG_TRIVIAL(info) << "UDP client disconnected";
 	}
 	catch (const boost::system::system_error& e) {
 		BOOST_LOG_TRIVIAL(error) << "UDP error during UDP accept: " << e.what() << std::endl;

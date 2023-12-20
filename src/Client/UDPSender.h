@@ -5,13 +5,12 @@
 
 class UDPSender{
 	public:
-		UDPSender(const std::string &ip, int port, int dataSize, bool isNagleUsed, std::atomic<bool> &isConnectionActive, std::atomic<bool>& shouldQuit);
+		UDPSender(const std::string &ip, int port, int dataSize, std::atomic<bool> &isConnectionActive, std::atomic<bool>& shouldQuit);
 		void run();
 	private:
 		std::string ip;
 		int port; 
-		int dataSize; 
-		bool isNagleUsed;
+		int dataSize;
 		boost::asio::io_service ioService;
 		boost::asio::ip::udp::endpoint endpoint;
 		boost::asio::ip::udp::socket socket;
