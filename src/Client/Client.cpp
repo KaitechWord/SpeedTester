@@ -7,16 +7,21 @@ Client::Client(const std::string& ip, int port, int dataSize, bool isNagleUsed)
 	, tcpSender(ip, port, dataSize, isNagleUsed, isConnectionActive, shouldQuit)
 	, udpSender(ip, port, dataSize, isConnectionActive, shouldQuit)
 {
-	this->threadPool.queueJob([this]() { this->tcpSender.run(); });
-	this->threadPool.queueJob([this]() { this->udpSender.run(); });
-	this->threadPool.queueJob([this]() { while (true) {
-		char a = getchar();
-		if (a == 'q') {
-			this->shouldQuit.store(true);
-			break;
-		}
-	}});
-	this->threadPool.start();
-	while (this->threadPool.busy()) {};
-	this->threadPool.stop();
+	try {
+		this->threadPool.queueJob([this]() { this->tcpSender.run(); });
+		this->threadPool.queueJob([this]() { this->udpSender.run(); });
+		this->threadPool.queueJob([this]() { while (true) {
+			char a = getchar();
+			if (a == 'q') {
+				this->shouldQuit.store(true);
+				break;
+			}
+		}});
+		this->threadPool.start();
+		while (this->threadPool.busy()) {};
+		this->threadPool.stop();
+	}
+	catch (std::exception& e) {
+		std::cout << "e: " << e.what() << std::endl;
+	}
 }

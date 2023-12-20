@@ -43,17 +43,18 @@ void TCPSender::sendMessages() {
 						break;
 					}
 					if (this->shouldQuit.load()) {
-						Sleep(10);
-						socket.close();
-						BOOST_LOG_TRIVIAL(trace) << "User exited.";
+						//Sleep(10);
 						break;
 					}
 				}
 				catch (const boost::system::system_error& e) {
-					BOOST_LOG_TRIVIAL(fatal) << "TCP error during write: " << e.what();
+					BOOST_LOG_TRIVIAL(fatal) << "TCP exception during write: " << e.what();
 				}
 			}
 			this->isConnectionActive.store(false);
+			socket.close();
+			socket.connect(boost::asio::ip::tcp::endpoint(boost::asio::ip::address::from_string(this->ip), this->port));
+			boost::asio::write(this->socket, boost::asio::buffer("END"));
 		}
 	}
 	catch (const boost::system::system_error& e) {

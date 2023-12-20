@@ -15,6 +15,7 @@ TCPListener::TCPListener(int port, std::atomic<bool>& shouldQuit)
 
 void TCPListener::establishConnection(){
 	this->acceptor.accept(this->socket);
+	//asynchronicznie to trzeba
 	if (this->isConnected) {
 		try {
 			boost::asio::write(this->socket, boost::asio::buffer("BUSY"));
@@ -48,6 +49,9 @@ void TCPListener::handleMessageSize(){
 			BOOST_LOG_TRIVIAL(error) << "TCP error converting string to number: " << e.what() << std::endl;
 		}
 	}
+	else if (receivedData.find("END") != std::string::npos) {
+		return;
+	}
 	else {
 		BOOST_LOG_TRIVIAL(error) << "TCP invalid format. Missing ':' in the received string." << std::endl;
 	}
@@ -68,6 +72,7 @@ void TCPListener::handleIncomingMessages(std::shared_ptr<boost::asio::ip::tcp::s
 			// Client disconnected
 			this->totalBytesReceived = 0;
 			this->isConnected = false;
+			this->shouldQuit.store(true);
 			return;
 		}
 		else if (error) {
@@ -96,6 +101,10 @@ void TCPListener::run(){
 	try {
 		while (!this->shouldQuit.load()) {
 			this->establishConnection();
+			if (this->shouldQuit.load()) {
+				this->socket.close();
+				break;
+			}
 			this->handleMessageSize();
 			std::shared_ptr<boost::asio::ip::tcp::socket> threadSocket = std::make_shared<boost::asio::ip::tcp::socket>(std::move(this->socket));
 			this->threadPool.queueJob([this, threadSocket]() { this->handleIncomingMessages(threadSocket); });
@@ -105,8 +114,4 @@ void TCPListener::run(){
 	catch (const boost::system::system_error& e) {
 		BOOST_LOG_TRIVIAL(error) << "TCP error during TCP accept: " << e.what() << std::endl;
 	}
-}
-
-TCPListener::~TCPListener() {
-	this->threadPool.stop();
 }

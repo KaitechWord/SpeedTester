@@ -8,7 +8,6 @@ class TCPListener {
 	public:
 		TCPListener(int port, std::atomic<bool> &shouldQuit);
 		void run();
-		~TCPListener();
 	private:
 		int port;
 		std::atomic<int> messageSize;
