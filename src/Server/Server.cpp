@@ -4,12 +4,14 @@
 
 Server::Server(int port)
 	: port(port)
-	, threadPool(3)
+	, threadPool(4)
 	, shouldQuit(false)
+	, discoveryListener("225.1.1.1", 8888, port)
 	, tcpListener(port, this->shouldQuit)
 	, udpListener(port, this->shouldQuit)
 {
 	try {
+		//this->threadPool.queueJob([this]() { this->discoveryListener.listenForDiscoveryRequests(); });
 		this->threadPool.queueJob([this]() { this->tcpListener.run(); });
 		this->threadPool.queueJob([this]() { this->udpListener.run(); });
 		this->threadPool.queueJob([this]() { while (true) {

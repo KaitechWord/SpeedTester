@@ -43,7 +43,6 @@ void TCPSender::sendMessages() {
 						break;
 					}
 					if (this->shouldQuit.load()) {
-						//Sleep(10);
 						break;
 					}
 				}

@@ -3,11 +3,13 @@
 #include <boost/log/trivial.hpp>
 
 Client::Client(const std::string& ip, int port, int dataSize, bool isNagleUsed)
-	: ip(ip), port(port), dataSize(dataSize), isNagleUsed(isNagleUsed), threadPool(3), isConnectionActive(false)
+	: ip(ip), port(port), dataSize(dataSize), isNagleUsed(isNagleUsed), threadPool(4), isConnectionActive(false)
+	, discovery("225.1.1.1", 8888)
 	, tcpSender(ip, port, dataSize, isNagleUsed, isConnectionActive, shouldQuit)
 	, udpSender(ip, port, dataSize, isConnectionActive, shouldQuit)
 {
 	try {
+		//this->threadPool.queueJob([this]() { this->discovery.sendDiscover(); });
 		this->threadPool.queueJob([this]() { this->tcpSender.run(); });
 		this->threadPool.queueJob([this]() { this->udpSender.run(); });
 		this->threadPool.queueJob([this]() { while (true) {
