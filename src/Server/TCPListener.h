@@ -9,7 +9,7 @@ class TCPListener {
 		TCPListener(int port, std::atomic<bool>& shouldQuit);
 		void run();
 	private:
-		void handleAccept(); //test
+		void handleAccept(const boost::system::error_code& error); //test
 		int port;
 		std::atomic<int> messageSize;
 		ThreadPool threadPool;

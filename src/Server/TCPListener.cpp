@@ -11,7 +11,7 @@ TCPListener::TCPListener(int port, std::atomic<bool>& shouldQuit)
 	, socket(ioService)
 {
 	this->threadPool.queueJob([this]() {
-		while (true) {
+		while (!this->shouldQuit.load()) {
 			this->ioService.run();
 			isRunning.store(true);
 		}
@@ -23,94 +23,30 @@ TCPListener::TCPListener(int port, std::atomic<bool>& shouldQuit)
 //		dac async accept tak zeby sie zapetlalo rekurencyjnie w async accept
 //		przystosowac apke do zamykania odpowiedniego
 void TCPListener::establishConnection(){
-	//this->acceptor.accept(this->socket);
-	////asynchronicznie to trzeba
-	//if (this->isConnected) {
-	//	try {
-	//		boost::asio::write(this->socket, boost::asio::buffer("BUSY"));
-	//		BOOST_LOG_TRIVIAL(info) << "TCP sent BUSY";
-	//		this->socket.close();
-	//	}
-	//	catch (const boost::system::system_error& e) {
-	//		BOOST_LOG_TRIVIAL(error) << "TCP error sending busy message: " << e.what();
-	//	}
-	//	BOOST_LOG_TRIVIAL(info) << "TCP connection already established.";
-	//	return;
-	//}
-	//this->isConnected.store(true);
-	acceptor.async_accept(socket,
-		[this](const boost::system::error_code& error) {
-			if (!error) {
-				if (this->isConnected) {
-					try {
-						boost::asio::write(this->socket, boost::asio::buffer("BUSY"));
-						BOOST_LOG_TRIVIAL(info) << "TCP sent BUSY";
-						this->socket.close();
-					}
-					catch (const boost::system::system_error& e) {
-						BOOST_LOG_TRIVIAL(error) << "TCP error sending busy message: " << e.what();
-					}
-					BOOST_LOG_TRIVIAL(info) << "TCP connection already established.";
-					return;
-				}
-				isConnected.store(true);
-				newConnection = true;
-			}
-			else {
-				BOOST_LOG_TRIVIAL(info) << "Accept error: " << error.message();
-			}
-		});
+	acceptor.async_accept(socket, std::bind(&TCPListener::handleAccept, this, std::placeholders::_1));
 }
 
-//test
-//void TCPListener::handleAccept() {
-//	if (isConnected) {
-//		try {
-//			boost::asio::write(socket, boost::asio::buffer("BUSY"));
-//			BOOST_LOG_TRIVIAL(info) << "TCP sent BUSY";
-//			socket.close();
-//		}
-//		catch (const boost::system::system_error& e) {
-//			BOOST_LOG_TRIVIAL(info) << "TCP error sending busy message: " << e.what();
-//		}
-//		BOOST_LOG_TRIVIAL(info) << "TCP connection already established.";
-//		return;
-//	}
-//
-//	isConnected = true;
-//
-//	try {
-//		boost::asio::streambuf receiveBuffer;
-//		boost::asio::read_until(socket, receiveBuffer, '\a');
-//		std::string receivedData(boost::asio::buffers_begin(receiveBuffer.data()),
-//			boost::asio::buffers_begin(receiveBuffer.data()) + receiveBuffer.size());
-//		std::size_t pos = receivedData.find(':');
-//		if (pos != std::string::npos) {
-//			std::string numStr = receivedData.substr(pos + 1);
-//			try {
-//				messageSize = std::stoi(numStr);
-//				BOOST_LOG_TRIVIAL(info) << "TCP extracted size: " << messageSize << std::endl;
-//				boost::asio::write(socket, boost::asio::buffer("GO ON\a"));
-//				this->shouldStealSocket.store(true);
-//			}
-//			catch (const std::exception& e) {
-//				BOOST_LOG_TRIVIAL(info) << "TCP error converting string to number: " << e.what() << std::endl;
-//			}
-//		}
-//		else if (receivedData.find("END") != std::string::npos) {
-//			// Handle END case
-//			BOOST_LOG_TRIVIAL(info) << "END";
-//		}
-//		else {
-//			BOOST_LOG_TRIVIAL(info) << "TCP invalid format. Missing ':' in the received string." << std::endl;
-//		}
-//
-//		receiveBuffer.consume(receiveBuffer.size());
-//	}
-//	catch (const boost::system::system_error& e) {
-//		BOOST_LOG_TRIVIAL(info) << "TCP error: " << e.what();
-//	}
-//}
+void TCPListener::handleAccept(const boost::system::error_code& error) {
+	if (!error) {
+		if (this->isConnected) {
+			try {
+				boost::asio::write(this->socket, boost::asio::buffer("BUSY"));
+				BOOST_LOG_TRIVIAL(info) << "TCP sent BUSY";
+				this->socket.close();
+			}
+			catch (const boost::system::system_error& e) {
+				BOOST_LOG_TRIVIAL(error) << "TCP error sending busy message: " << e.what();
+			}
+			BOOST_LOG_TRIVIAL(info) << "TCP connection already established.";
+			return;
+		}
+		isConnected.store(true);
+		newConnection = true;
+	}
+	else {
+		BOOST_LOG_TRIVIAL(info) << "Accept error: " << error.message();
+	}
+}
 
 void TCPListener::handleMessageSize(){
 	boost::asio::streambuf receiveBuffer;
@@ -180,7 +116,7 @@ void TCPListener::handleIncomingMessages(std::shared_ptr<boost::asio::ip::tcp::s
 
 void TCPListener::run(){
 	try {
-		while (true) {
+		while (!this->shouldQuit.load()) {
 			if (this->isRunning.load()) {
 				this->establishConnection();
 				while (!this->shouldQuit.load()) {
@@ -194,11 +130,6 @@ void TCPListener::run(){
 						std::shared_ptr<boost::asio::ip::tcp::socket> threadSocket = std::make_shared<boost::asio::ip::tcp::socket>(std::move(this->socket));
 						this->threadPool.queueJob([this, threadSocket]() { this->handleIncomingMessages(threadSocket); });
 					}
-					/*this->handleAccept();
-					if (this->shouldStealSocket.load()) {
-						std::shared_ptr<boost::asio::ip::tcp::socket> threadSocket = std::make_shared<boost::asio::ip::tcp::socket>(std::move(this->socket));
-						this->threadPool.queueJob([this, threadSocket]() { this->handleIncomingMessages(threadSocket); });
-					}*/
 				}
 				BOOST_LOG_TRIVIAL(info) << "TCP client disconnected.";
 			}
