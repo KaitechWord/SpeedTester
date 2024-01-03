@@ -5,6 +5,4 @@ set(server_src
 	src/Server/TCPListener.h
 	src/Server/UDPListener.cpp
 	src/Server/UDPListener.h
-	src/Server/DiscoveryListener.cpp
-	src/Server/DiscoveryListener.h
 )

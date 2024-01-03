@@ -26,8 +26,10 @@ void TCPSender::sendMessages() {
 			boost::asio::buffers_begin(receiveBuffer.data()) + receiveBuffer.size());
 		std::size_t busyPos = receivedData.find("BUSY");
 		if (busyPos != std::string::npos) {
+			BOOST_LOG_TRIVIAL(fatal) << "Server busy";
 			socket.close();
 		} else if (receivedData.find("GO ON") != std::string::npos) {
+			BOOST_LOG_TRIVIAL(fatal) << "Connected to server";
 			std::vector<char> message(dataSize, '\a');
 			this->isConnectionActive.store(true);
 			boost::system::error_code error;
@@ -35,7 +37,7 @@ void TCPSender::sendMessages() {
 				try {
 					boost::asio::write(this->socket, boost::asio::buffer(message), error);
 					if (error == boost::asio::error::eof) {
-						BOOST_LOG_TRIVIAL(trace) << "TCP server disconnected.";
+						BOOST_LOG_TRIVIAL(info) << "TCP server disconnected.";
 						break;
 					}
 					else if (error) {
@@ -43,6 +45,7 @@ void TCPSender::sendMessages() {
 						break;
 					}
 					if (this->shouldQuit.load()) {
+						BOOST_LOG_TRIVIAL(fatal) << "TCP quitting";
 						break;
 					}
 				}
@@ -52,8 +55,10 @@ void TCPSender::sendMessages() {
 			}
 			this->isConnectionActive.store(false);
 			socket.close();
-			socket.connect(boost::asio::ip::tcp::endpoint(boost::asio::ip::address::from_string(this->ip), this->port));
-			boost::asio::write(this->socket, boost::asio::buffer("END"));
+		}
+		else {
+			BOOST_LOG_TRIVIAL(fatal) << "Server busy";
+			socket.close();
 		}
 	}
 	catch (const boost::system::system_error& e) {

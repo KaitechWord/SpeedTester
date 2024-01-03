@@ -1,6 +1,5 @@
 #pragma once
 #include <boost/asio.hpp>
-#include "../ThreadPool/ThreadPool.h"
 
 class UDPListener {
 	public:
@@ -9,7 +8,6 @@ class UDPListener {
 	private:
 		int port;
 		std::atomic<int> messageSize;
-		ThreadPool threadPool;
 		boost::asio::io_service ioService;
 		boost::asio::ip::udp::endpoint endpoint;
 		boost::asio::ip::udp::socket socket;

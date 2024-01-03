@@ -24,13 +24,15 @@ TCPListener::TCPListener(int port, std::atomic<bool>& shouldQuit)
 //		przystosowac apke do zamykania odpowiedniego
 void TCPListener::establishConnection(){
 	acceptor.async_accept(socket, std::bind(&TCPListener::handleAccept, this, std::placeholders::_1));
+	this->isConnectionWaiting.store(true);
 }
 
 void TCPListener::handleAccept(const boost::system::error_code& error) {
 	if (!error) {
 		if (this->isConnected) {
+			this->isConnectionWaiting.store(false);
 			try {
-				boost::asio::write(this->socket, boost::asio::buffer("BUSY"));
+				boost::asio::write(this->socket, boost::asio::buffer("BUSY\a"));
 				BOOST_LOG_TRIVIAL(info) << "TCP sent BUSY";
 				this->socket.close();
 			}
@@ -79,7 +81,7 @@ void TCPListener::handleMessageSize(){
 void TCPListener::handleIncomingMessages(std::shared_ptr<boost::asio::ip::tcp::socket> socket) {
 	this->totalBytesReceived = 0;
 	this->startTime = std::chrono::steady_clock::now();
-	while (!this->shouldQuit.load()) {
+	while (!this->shouldQuit.load() && this->isConnected) {
 		std::vector<char> message(this->messageSize);
 		boost::system::error_code error;
 
@@ -88,9 +90,7 @@ void TCPListener::handleIncomingMessages(std::shared_ptr<boost::asio::ip::tcp::s
 		if (error == boost::asio::error::eof) {
 			// Client disconnected
 			this->totalBytesReceived = 0;
-			this->isConnected = false;
-			this->shouldQuit.store(true);
-			return;
+			break;
 		}
 		else if (error) {
 			// Handle other errors
@@ -111,31 +111,35 @@ void TCPListener::handleIncomingMessages(std::shared_ptr<boost::asio::ip::tcp::s
 		}
 	}
 	socket->close();
+	this->socket.close();
 	this->isConnected.store(false);
 }
 
 void TCPListener::run(){
 	try {
 		while (!this->shouldQuit.load()) {
-			if (this->isRunning.load()) {
+			if (!this->isConnectionWaiting.load()) {
 				this->establishConnection();
-				while (!this->shouldQuit.load()) {
-					if (this->shouldQuit.load()) {
-						this->socket.close();
-						break;
-					}
-					if (newConnection) {
-						newConnection = false;
-						this->handleMessageSize();
-						std::shared_ptr<boost::asio::ip::tcp::socket> threadSocket = std::make_shared<boost::asio::ip::tcp::socket>(std::move(this->socket));
-						this->threadPool.queueJob([this, threadSocket]() { this->handleIncomingMessages(threadSocket); });
-					}
+			}
+			while (this->isConnected.load()) {
+				if (!this->isConnectionWaiting.load()) {
+					this->establishConnection();
 				}
-				BOOST_LOG_TRIVIAL(info) << "TCP client disconnected.";
+				if (newConnection) {
+					newConnection = false;
+					this->isConnectionWaiting.store(false);
+					this->handleMessageSize();
+					std::shared_ptr<boost::asio::ip::tcp::socket> threadSocket = std::make_shared<boost::asio::ip::tcp::socket>(std::move(this->socket));
+					this->threadPool.queueJob([this, threadSocket]() { this->handleIncomingMessages(threadSocket);
+																	   BOOST_LOG_TRIVIAL(info) << "TCP client disconnected.";});
+					this->socket = boost::asio::ip::tcp::socket(ioService);
+				}
 			}
 		}
 	}
 	catch (const boost::system::system_error& e) {
 		BOOST_LOG_TRIVIAL(error) << "TCP error during TCP accept: " << e.what() << std::endl;
 	}
+	while (this->threadPool.busy()) {}
+	this->threadPool.stop();
 }

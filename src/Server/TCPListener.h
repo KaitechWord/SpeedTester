@@ -21,6 +21,7 @@ class TCPListener {
 		std::atomic<bool> isConnected;
 		std::atomic<bool> isRunning = false;
 		bool newConnection = false;
+		std::atomic<bool> isConnectionWaiting = false;
 		std::chrono::steady_clock::time_point startTime;
 		void establishConnection();
 		void handleMessageSize();

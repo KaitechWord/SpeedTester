@@ -4,7 +4,6 @@
 
 Client::Client(const std::string& ip, int port, int dataSize, bool isNagleUsed)
 	: ip(ip), port(port), dataSize(dataSize), isNagleUsed(isNagleUsed), threadPool(4), isConnectionActive(false)
-	, discovery("225.1.1.1", 8888)
 	, tcpSender(ip, port, dataSize, isNagleUsed, isConnectionActive, shouldQuit)
 	, udpSender(ip, port, dataSize, isConnectionActive, shouldQuit)
 {

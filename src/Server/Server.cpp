@@ -4,9 +4,8 @@
 
 Server::Server(int port)
 	: port(port)
-	, threadPool(4)
+	, threadPool(3)
 	, shouldQuit(false)
-	, discoveryListener("225.1.1.1", 8888, port)
 	, tcpListener(port, this->shouldQuit)
 	, udpListener(port, this->shouldQuit)
 {

@@ -5,6 +5,4 @@ set(client_src
 	src/Client/TCPSender.h
 	src/Client/UDPSender.cpp
 	src/Client/UDPSender.cpp
-	src/Client/Discovery.cpp
-	src/Client/Discovery.h
 )

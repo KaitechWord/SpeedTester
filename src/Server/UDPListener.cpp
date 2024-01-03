@@ -2,13 +2,11 @@
 #include <boost/log/trivial.hpp>
 
 UDPListener::UDPListener(int port, std::atomic<bool>& shouldQuit)
-	: port(port), startTime(std::chrono::steady_clock::now()), threadPool(1), messageSize(0), totalBytesReceived(0), isSizeSet(false)
+	: port(port), startTime(std::chrono::steady_clock::now()), messageSize(0), totalBytesReceived(0), isSizeSet(false)
 	, shouldQuit(shouldQuit)
 	// it accepts every ip in given port
 	, endpoint(boost::asio::ip::udp::v4(), port), socket(ioService, endpoint)
-{
-	threadPool.start();
-}
+{}
 
 void UDPListener::handleIncomingMessages() {
 	this->totalBytesReceived = 0;
